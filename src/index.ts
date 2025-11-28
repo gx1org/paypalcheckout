@@ -11,7 +11,6 @@ import { ContentfulStatusCode } from 'hono/utils/http-status';
 
 const app = new Hono()
 
-
 // --- ENV ---
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!
@@ -107,10 +106,7 @@ app.post('/api/orders/:orderID/capture', async (c) => {
     const { pakasir_id } = await c.req.json()
     const orderID = c.req.param('orderID')
     const { jsonResponse, httpStatusCode } = await captureOrder(orderID, pakasir_id)
-
-    if (httpStatusCode == 201 || httpStatusCode == 200) {
-      sendWebhookToPakasir(pakasir_id, orderID)
-    }
+    await sendWebhookToPakasir(pakasir_id, orderID)
 
     return c.json(jsonResponse, httpStatusCode as ContentfulStatusCode)
   } catch (err) {
@@ -119,8 +115,8 @@ app.post('/api/orders/:orderID/capture', async (c) => {
   }
 })
 
-function sendWebhookToPakasir(id: string, paypal_id: string) {
-  fetch(`https://app.pakasir.com/api/webhook-paypal-2?secret=${process.env.PAKASIR_SECRET}`, {
+async function sendWebhookToPakasir(id: string, paypal_id: string) {
+  const res = await fetch(`https://app.pakasir.com/api/webhook-paypal-2?secret=${process.env.PAKASIR_SECRET}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -130,6 +126,15 @@ function sendWebhookToPakasir(id: string, paypal_id: string) {
       paypal_id,
     }),
   })
+
+  if (!res.ok) {
+    console.error('Failed to send webhook to Pakasir', res.status, res.statusText)
+    throw new Error('Failed to send webhook to Pakasir')
+  }
+
+  const data = await res.json()
+  console.log('Response from Pakasir:', data);
+  return data
 }
 
 export default app
