@@ -106,7 +106,11 @@ app.post('/api/orders/:orderID/capture', async (c) => {
     const { pakasir_id } = await c.req.json()
     const orderID = c.req.param('orderID')
     const { jsonResponse, httpStatusCode } = await captureOrder(orderID, pakasir_id)
-    await sendWebhookToPakasir(pakasir_id, orderID)
+    const err = await sendWebhookToPakasir(pakasir_id, orderID)
+    if (err) {
+      console.error(err)
+      return c.json({ error: err }, 500)
+    }
 
     return c.json(jsonResponse, httpStatusCode as ContentfulStatusCode)
   } catch (err) {
@@ -127,14 +131,12 @@ async function sendWebhookToPakasir(id: string, paypal_id: string) {
     }),
   })
 
+  const data = await res.json()
   if (!res.ok) {
-    console.error('Failed to send webhook to Pakasir', res.status, res.statusText)
-    throw new Error('Failed to send webhook to Pakasir')
+    return 'Failed to send webhook to Pakasir: '+JSON.stringify(data)
   }
 
-  const data = await res.json()
-  console.log('Response from Pakasir:', data);
-  return data
+  console.log('Response OK from Pakasir:', data);
 }
 
 export default app
