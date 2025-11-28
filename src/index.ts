@@ -8,11 +8,9 @@ import {
   OrdersController,
 } from "@paypal/paypal-server-sdk";
 import { ContentfulStatusCode } from 'hono/utils/http-status';
-import { serveStatic } from '@hono/node-server/serve-static';
 
 const app = new Hono()
 
-app.use('/*', serveStatic({ root: './public' }))
 
 // --- ENV ---
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!
